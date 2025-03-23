@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Login</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            background: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
+            width: 350px;
+            text-align: center;
+        }
+        .student-icon {
+            font-size: 60px;
+            color: #007bff;
+            margin-bottom: 15px;
+            background: #e9f5ff;
+            padding: 20px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .form-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .form-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
+        }
+        .form-control {
+            padding-left: 40px;
+            height: 45px;
+            border-radius: 25px;
+        }
+        .error-message {
+            color: red;
+            font-size: 14px;
+            text-align: left;
+            margin-top: 5px;
+        }
+        .btn-login {
+            background: #28a745;
+            color: white;
+            border-radius: 25px;
+            font-weight: bold;
+            padding: 10px;
+            width: 100%;
+        }
+        .btn-login:hover {
+            background: #218838;
+        }
+        .back-home {
+            margin-top: 15px;
+            display: block;
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <i class="fa-solid fa-user-graduate student-icon"></i>
+        <h3 class="mb-3">Student Login</h3>
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+        <form id="loginForm" method="POST" action="/login/student">
+            <div class="form-group">
+                <i class="fa-solid fa-user"></i>
+                <input type="text" class="form-control" id="username" name="username" placeholder="Username">
+                <div id="usernameError" class="error-message"></div>
+            </div>
+            <div class="form-group">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" class="form-control" id="password" name="password" placeholder="Password">
+                <div id="passwordError" class="error-message"></div>
+            </div>
+            <button type="submit" class="btn btn-login">Login</button>
+        </form>
+        <a href="/" class="back-home">← Back to Home</a>
+    </div>
+
+    <script>
+        document.getElementById("loginForm").addEventListener("submit", function(event) {
+            let valid = true;
+            let username = document.getElementById("username").value.trim();
+            let password = document.getElementById("password").value.trim();
+
+            document.getElementById("usernameError").textContent = "";
+            document.getElementById("passwordError").textContent = "";
+
+            if (username === "") {
+                document.getElementById("usernameError").textContent = "Username is required.";
+                valid = false;
+            }
+
+            if (password === "") {
+                document.getElementById("passwordError").textContent = "Password is required.";
+                valid = false;
+            }
+
+            if (!valid) {
+                event.preventDefault(); // Prevent form submission
+            }
+        });
+    </script>
+</body>
+</html>

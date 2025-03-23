@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.4/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.4/vfs_fonts.js"></script>
+    <style>
+        body { background: #f8f9fa; }
+        .navbar-brand { font-weight: bold; letter-spacing: 1px; }
+        .container h2 { margin-top: 1rem; font-weight: 600; }
+        .table { background: #fff; }
+        .table thead { background: #343a40; color: #fff; }
+        .btn-group { margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand" href="#">Admin Dashboard</a>
+    <div class="collapse navbar-collapse">
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+        </ul>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <h2 class="mb-4">Attendance Records</h2>
+
+    <!-- Filter Options -->
+    <div class="row mb-3">
+      <div class="col-md-3">
+          <input type="text" id="filterName" class="form-control" placeholder="Filter by Name">
+      </div>
+      <div class="col-md-3">
+          <input type="date" id="filterDate" class="form-control">
+      </div>
+      <div class="col-md-3">
+          <input type="text" id="filterTimestamp" class="form-control" placeholder="Filter by Timestamp">
+      </div>
+      <div class="col-md-3">
+          <button class="btn btn-primary" onclick="applyFilter()">Filter</button>
+          <button class="btn btn-secondary" onclick="clearFilter()">Clear</button>
+      </div>
+  </div>
+
+    <!-- Download Buttons -->
+    <div class="btn-group">
+        <button class="btn btn-success mr-2" onclick="downloadExcel()">Download Excel</button>
+        <button class="btn btn-danger" onclick="downloadPDF()">Download PDF</button>
+    </div>
+
+    <!-- Attendance Table -->
+    <table id="attendanceTable" class="table table-striped table-bordered">
+        <thead>
+        <tr>
+            <th>Person Name</th>
+            <th>Date</th>
+            <th>Timestamp (UTC)</th>
+            <th>Action</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for rec in records %}
+        <tr data-id="{{ rec._id }}">
+            <td class="person-name">{{ rec.person_name }}</td>
+            <td class="date">{{ rec.date }}</td>
+            <td class="timestamp">{{ rec.timestamp }}</td>
+            <td>
+                <button class="btn btn-sm btn-warning edit-btn" data-toggle="modal" data-target="#editModal">Edit</button>
+                <a href="/delete_attendance?record_id={{ rec._id }}" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">Edit Attendance Record</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editRecordId">
+                <div class="form-group">
+                    <label>Person Name</label>
+                    <input type="text" id="editPersonName" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="editDate" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Timestamp</label>
+                    <input type="text" id="editTimestamp" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="saveChanges()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+  function applyFilter() {
+    let nameFilter = $("#filterName").val().toLowerCase();
+    let dateFilter = $("#filterDate").val();
+    let timestampFilter = $("#filterTimestamp").val().toLowerCase();
+
+    let rows = $("#attendanceTable tbody tr");
+    let found = false;
+
+    rows.each(function () {
+        let name = $(this).find(".person-name").text().toLowerCase();
+        let date = $(this).find(".date").text();
+        let timestamp = $(this).find(".timestamp").text().toLowerCase();
+
+        let matches = name.includes(nameFilter) && date.includes(dateFilter) && timestamp.includes(timestampFilter);
+        $(this).toggle(matches);
+
+        if (matches) {
+            found = true;
+        }
+    });
+
+    // If no matching records, show a "No records found" message
+    if (!found) {
+        $("#attendanceTable tbody").append('<tr class="no-records"><td colspan="4" class="text-center">No records found</td></tr>');
+    } else {
+        $(".no-records").remove();
+    }
+}
+    // Clear Filter
+    function clearFilter() {
+    $("#filterName, #filterDate, #filterTimestamp").val("");
+    $("#attendanceTable tbody tr").show();
+    $(".no-records").remove(); // Remove "No records found" message
+}
+    // Open modal and populate fields
+    $(document).on("click", ".edit-btn", function() {
+        let row = $(this).closest("tr");
+        let id = row.data("id");
+        let name = row.find(".person-name").text();
+        let date = row.find(".date").text();
+        let timestamp = row.find(".timestamp").text();
+
+        $("#editRecordId").val(id);
+        $("#editPersonName").val(name);
+        $("#editDate").val(date);
+        $("#editTimestamp").val(timestamp);
+    });
+
+    // Save changes
+    function saveChanges() {
+        let id = $("#editRecordId").val();
+        let name = $("#editPersonName").val();
+        let date = $("#editDate").val();
+        let timestamp = $("#editTimestamp").val();
+
+        let row = $('tr[data-id="' + id + '"]');
+        row.find(".person-name").text(name);
+        row.find(".date").text(date);
+        row.find(".timestamp").text(timestamp);
+
+        $('#editModal').modal('hide');
+    }
+
+    // Download Excel
+    function downloadExcel() {
+        let table = document.getElementById("attendanceTable").cloneNode(true);
+        table.querySelectorAll("th:last-child, td:last-child").forEach(el => el.remove());
+
+        let wb = XLSX.utils.book_new();
+        let ws = XLSX.utils.table_to_sheet(table);
+        XLSX.utils.book_append_sheet(wb, ws, "Attendance Report");
+        XLSX.writeFile(wb, "Attendance_Report.xlsx");
+    }
+
+    // Download PDF
+    function downloadPDF() {
+        let table = document.getElementById("attendanceTable").cloneNode(true);
+        table.querySelectorAll("th:last-child, td:last-child").forEach(el => el.remove());
+
+        let data = [
+            [{ text: 'Attendance Report', style: 'header', colSpan: 3, alignment: 'center' }, {}, {}],
+            [{ text: `Generated on: ${new Date().toLocaleDateString()}`, colSpan: 3, alignment: 'center' }, {}, {}],
+            Array.from(table.querySelectorAll("th")).map(th => ({ text: th.innerText, bold: true, fillColor: "#eeeeee" }))
+        ];
+
+        let rows = table.querySelectorAll("tbody tr");
+        rows.forEach(row => {
+            let rowData = Array.from(row.cells).map(td => ({ text: td.innerText, border: [true, true, true, true], fontSize: 10 }));
+            data.push(rowData);
+        });
+
+        let docDefinition = {
+            content: [
+                { text: `Generated on: ${new Date().toLocaleDateString()}`, style: "subheader" },
+                { 
+                    table: { 
+                        headerRows: 1, 
+                        widths: ['40%', '30%', '30%'], 
+                        body: data 
+                    },
+                    layout: 'lightHorizontalLines' 
+                }
+            ],
+            styles: {
+                subheader: { fontSize: 12, italics: true, alignment: "center", margin: [0, 0, 0, 10] }
+            },
+            defaultStyle: { fontSize: 12 }
+        };
+
+        pdfMake.createPdf(docDefinition).download("Attendance_Report.pdf");
+    }
+</script>
+
+</body>
+</html>
