@@ -2,6 +2,9 @@ import os
 import numpy as np
 import torch
 import torch.nn.functional as F
+import pymysql
+import jwt
+import datetime
 from facenet_pytorch import InceptionResnetV1, MTCNN  # Face recognition model (Adhikari et al., 2019)
 from PIL import Image
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
@@ -10,7 +13,8 @@ from datetime import datetime
 from bson.objectid import ObjectId
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
-import pymysql
+from functools import wraps
+
 
 # -------------------------------
 # Configuration & Initialization
@@ -30,16 +34,16 @@ client = MongoClient(mongo_uri)
 db = client.facedetectionattendance
 attendance_collection = db.attendance
 
-# Database connection
-def get_db_connection():
-    connection = pymysql.connect(
-        host='localhost',
-        user='root',
-        password='Tharuicbt01',
-        database='attendance_db',
-        cursorclass=pymysql.cursors.DictCursor
-    )
-    return connection
+# # Database connection
+# def get_db_connection():
+#     connection = pymysql.connect(
+#         host='localhost',
+#         user='root',
+#         password='Tharuicbt01',
+#         database='attendance_db',
+#         cursorclass=pymysql.cursors.DictCursor
+#     )
+#     return connection
 
 # -------------------------------
 # 1. Load Face Recognition Models
@@ -111,6 +115,104 @@ def identify_face(face_embedding, enrolled_dict, threshold=0.7):
 # -------------------------------
 app = Flask(__name__)
 app.secret_key = "your_secret_key_here"  # For session management (Flask, 2023)
+
+
+# # JWT Token
+
+# @app.route('/login/teacher', methods=['GET', 'POST'])
+# def login_teacher():
+#     error = None
+#     if request.method == 'POST':
+#         username = request.form.get('username')
+#         password = request.form.get('password')
+#         if username == TEACHER_USERNAME and password == TEACHER_PASSWORD:
+#             # Generate a JWT token for the teacher
+#             token = jwt.encode({
+#                 'role': 'teacher', 
+#                 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)  # Token expiration time (1 hour)
+#             }, SECRET_KEY, algorithm='HS256') # type: ignore
+#             session['token'] = token  # Store the token in session
+#             return redirect(url_for('dashboard_teacher'))
+#         else:
+#             error = "Invalid teacher credentials. Please try again."
+#     return render_template('login_teacher.html', error=error)
+
+# # Token Validation Decorator
+# def token_required(f):
+#     @wraps(f)
+#     def decorated_function(*args, **kwargs):
+#         token = None
+#         # Check if the token is passed in the Authorization header
+#         if 'Authorization' in request.headers:
+#             token = request.headers['Authorization'].split(" ")[1]  # Format: Bearer <Token>
+        
+#         if not token:
+#             return jsonify({'error': 'Token is missing!'}), 403  # Forbidden
+        
+#         try:
+#             # Decode the token
+#             data = jwt.decode(token, SECRET_KEY, algorithms=['HS256']) # type: ignore
+#             current_user_role = data['role']
+#         except jwt.ExpiredSignatureError:
+#             return jsonify({'error': 'Token has expired!'}), 401  # Unauthorized
+#         except jwt.InvalidTokenError:
+#             return jsonify({'error': 'Invalid token!'}), 401  # Unauthorized
+        
+#         # Attach the role to the request context for later use
+#         request.user_role = current_user_role
+#         return f(*args, **kwargs)
+    
+#     return decorated_function
+
+# # Apply Token Validation to Protected Routes
+# @app.route('/identify', methods=['POST'])
+# @token_required
+# def identify_route():
+#     # Only allow students to mark attendance via face recognition
+#     if request.user_role != 'student':
+#         return jsonify({'error': 'Attendance marking is only available for students.'}), 401
+    
+#     # The rest of the attendance marking code...
+
+# # Handling Token in Other Routes
+# @app.route('/upload_face', methods=['POST'])
+# @token_required
+# def upload_face():
+#     # Only teachers can upload new face images
+#     if request.user_role != 'teacher':
+#         return jsonify({'error': 'Unauthorized: Only teachers can upload face images.'}), 401
+    
+#     # Image upload logic...
+
+# # Error Handling
+# @app.route('/identify', methods=['POST'])
+# @token_required
+# def identify_route():
+#     if request.user_role != 'student':
+#         return jsonify({'error': 'Attendance marking is only available for students.'}), 401
+
+#     if 'file' not in request.files:
+#         return jsonify({'error': 'No file part in the request'}), 400
+#     file = request.files['file']
+#     if file.filename == '':
+#         return jsonify({'error': 'No file selected'}), 400
+
+#     try:
+#         img = Image.open(file.stream).convert('RGB')
+#     except Exception as e:
+#         return jsonify({'error': 'Invalid image file'}), 400
+
+#     # Continue the face recognition process...
+# # Logout & Token Expiration
+# @app.route('/logout')
+# def logout():
+#     session.clear()  # Clears the session, effectively logging out the user
+#     return redirect(url_for('index'))
+
+# # Example of Handling Expired Tokens
+# {
+#   "error": "Token has expired!"
+# }
 
 # Define credentials for each role (for demonstration purposes) (Flask, 2023)
 TEACHER_USERNAME = "teacher"
