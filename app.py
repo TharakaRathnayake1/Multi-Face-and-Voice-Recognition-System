@@ -220,16 +220,10 @@ app.secret_key = "your_secret_key_here"  # For session management (Flask, 2023)
 # Define credentials for each role (for demonstration purposes) (Flask, 2023)
 TEACHER_USERNAME = "teacher"
 TEACHER_PASSWORD = "teacherpass"
-TEACHER_USERNAME = "teacher2"
-TEACHER_PASSWORD = "teacherpass2"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "adminpass"
-ADMIN_USERNAME = "admin2"
-ADMIN_PASSWORD = "admin2"
 STUDENT_USERNAME = "student"
 STUDENT_PASSWORD = "studentpass"
-STUDENT_USERNAME = "student2"
-STUDENT_PASSWORD = "student2"
 
 
 # Public homepage route
