@@ -14,6 +14,8 @@ from bson.objectid import ObjectId
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
 from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from werkzeug.security import generate_password_hash
 
 
 # -------------------------------
@@ -88,6 +90,7 @@ def enroll_faces(dataset_dir):
     return enrolled
 
 enrolled_faces = enroll_faces(dataset_dir)
+
 
 # -------------------------------
 # 3. Identification Function
@@ -217,15 +220,54 @@ app.secret_key = "your_secret_key_here"  # For session management (Flask, 2023)
 # Define credentials for each role (for demonstration purposes) (Flask, 2023)
 TEACHER_USERNAME = "teacher"
 TEACHER_PASSWORD = "teacherpass"
+TEACHER_USERNAME = "teacher2"
+TEACHER_PASSWORD = "teacherpass2"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "adminpass"
+ADMIN_USERNAME = "admin2"
+ADMIN_PASSWORD = "admin2"
 STUDENT_USERNAME = "student"
 STUDENT_PASSWORD = "studentpass"
+STUDENT_USERNAME = "student2"
+STUDENT_PASSWORD = "student2"
+
 
 # Public homepage route
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# ✅ Define `users_collection`
+users_collection = db.users  # Ensure the collection name is 'users'
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        role = request.form['role']  # Get role from form
+
+        if password != confirm_password:
+            flash("Passwords do not match!", "danger")
+            return redirect(url_for('register'))  # Updated route name
+
+        # Hash password before storing
+        hashed_password = generate_password_hash(password)
+
+        # Insert into MongoDB
+        users_collection.insert_one({
+            "username": username,
+            "email": email,
+            "password": hashed_password,
+            "role": role
+        })
+
+        flash("User registered successfully!", "success")
+        return redirect(url_for('register'))  # Updated route name
+
+    return render_template('register.html')  # No need to change the template name
 
 # -------------------------------
 # Identification Endpoint (Student Attendance)
@@ -302,6 +344,16 @@ def upload_face():
         return jsonify({'error': f'Failed to save image: {str(e)}'}), 500
 
     return jsonify({'message': 'Image uploaded successfully', 'file_path': save_path})
+
+@app.route('/voice_attendance', methods=['POST'])
+def voice_attendance():
+    data = request.json
+    voice_input = data.get('voice_input', '').lower().strip()  # Normalize input
+
+    if voice_input == "present":
+        return jsonify({"success": True, "confidence_score": 0.95})  # Example score
+    else:
+        return jsonify({"success": False, "message": "Invalid response."})
 
 @app.route('/retrain', methods=['POST'])
 def retrain():

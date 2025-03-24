@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Registration</title>
+    
+    <!-- Bootstrap 4 CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        body {
+            background: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .register-card {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            text-align: center;
+        }
+        .admin-icon {
+            font-size: 60px;
+            color: #28a745;
+            margin-bottom: 15px;
+            background: #e5ffe5;
+            padding: 20px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .form-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .form-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
+        }
+        .form-control {
+            padding-left: 40px;
+            height: 45px;
+            border-radius: 25px;
+        }
+        .btn-register {
+            background: #28a745;
+            color: white;
+            border-radius: 25px;
+            font-weight: bold;
+            padding: 10px;
+            width: 100%;
+        }
+        .btn-register:hover {
+            background: #1c7c2f;
+        }
+        .back-home {
+            margin-top: 15px;
+            display: block;
+            text-decoration: none;
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-card">
+        <i class="fa-solid fa-user-plus admin-icon"></i>
+        <h3 class="mb-3">Admin Registration</h3>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form id="registerForm" method="POST" action="{{ url_for('register') }}">
+            <div class="form-group">
+                <i class="fa-solid fa-user"></i>
+                <input type="text" class="form-control" id="username" name="username" placeholder="Username">
+            </div>
+            <div class="form-group">
+                <i class="fa-solid fa-envelope"></i>
+                <input type="email" class="form-control" id="email" name="email" placeholder="Email">
+            </div>
+            <div class="form-group">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" class="form-control" id="password" name="password" placeholder="Password">
+            </div>
+            <div class="form-group">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Confirm Password">
+            </div>
+            <div class="form-group">
+                <i class="fa-solid fa-users"></i>
+                <select class="form-control" id="role" name="role">
+                    <option value="admin">Admin</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="student">Student</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-register">Register</button>
+        </form>
+        <a href="/" class="back-home">← Back to Home</a>
+    </div>
+</body>
+</html>

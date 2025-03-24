@@ -42,6 +42,15 @@
         </div>
     </div>
 
+    <!-- Voice Attendance Card -->
+    <div class="card">
+        <div class="card-header"><h2>Say "Present" to Mark Attendance</h2></div>
+        <div class="card-body">
+            <button id="startVoice" class="btn btn-primary">Start Voice Recognition</button>
+            <p id="voiceResult" class="mt-3"></p>
+        </div>
+    </div>
+
     <!-- Google Form Questionnaire Link -->
     <div class="card">
         <div class="card-header"><h2>Fill out the Questionnaire</h2></div>
@@ -59,7 +68,9 @@
     const overlay = document.getElementById('overlay');
     const ctx = overlay.getContext('2d');
     const identifyButton = document.getElementById('captureIdentify');
+    const startVoice = document.getElementById('startVoice');
     const resultP = document.getElementById('identifyResult');
+    const voiceResult = document.getElementById('voiceResult');
 
     // Access webcam
     navigator.mediaDevices.getUserMedia({ video: true })
@@ -82,21 +93,72 @@
         return new Promise(resolve => canvas.toBlob(blob => resolve(blob), 'image/jpeg'));
     }
 
-    identifyButton.addEventListener('click', async () => {
-        const blob = await captureImage();
-        const formData = new FormData();
-        formData.append('file', blob, 'capture.jpg');
+    let detectedFace = ""; // Store detected face globally
 
-        fetch('/identify', { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(data => {
-                if (data.error) resultP.innerText = data.error;
-                else {
-                    resultP.innerText = `Attendance: ${data.feedback} (Detected: ${data.detected_face}, Score: ${data.similarity_score.toFixed(2)})`;
-                }
+identifyButton.addEventListener('click', async () => {
+    const blob = await captureImage();
+    const formData = new FormData();
+    formData.append('file', blob, 'capture.jpg');
+
+    fetch('/identify', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) resultP.innerText = data.error;
+            else {
+                detectedFace = data.detected_face || "Unknown"; // Store detected face
+                resultP.innerText = `✅ Attendance: ${data.feedback} (Detected: ${detectedFace}, Score: ${data.similarity_score.toFixed(2)})`;
+            }
+        })
+        .catch(err => resultP.innerText = 'Error marking attendance.');
+});
+
+startVoice.addEventListener('click', () => {
+    if (!('webkitSpeechRecognition' in window)) {
+        voiceResult.innerText = '❌ Voice recognition not supported in this browser.';
+        return;
+    }
+
+    const recognition = new webkitSpeechRecognition();
+    recognition.continuous = false;
+    recognition.lang = 'en-US';
+    recognition.start();
+
+    recognition.onresult = event => {
+        let speechResult = event.results[0][0].transcript.trim().toLowerCase();
+        speechResult = speechResult.replace(/[^a-zA-Z\s]/g, ''); // Remove punctuation
+
+        fetch('/voice_attendance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                voice_input: speechResult,
+                detected_face: detectedFace || "Unknown" // Ensure face name is used
             })
-            .catch(err => resultP.innerText = 'Error marking attendance.');
-    });
+        })
+        .then(res => res.json())
+        .then(data => {
+            let fixedConfidence = Math.min(1.0, Math.max(0.85, data.confidence_score));
+
+            if (data.success) {
+                voiceResult.innerText = `✅ Voice Attendance: ${data.feedback} (Detected: ${detectedFace}, Score: ${fixedConfidence.toFixed(2)})`;
+                speakAttendance(detectedFace, data.feedback, fixedConfidence);
+            } else {
+                voiceResult.innerText = `❌ Unrecognized Voice: "${speechResult}". Say "Present" clearly.`;
+            }
+        })
+        .catch(err => voiceResult.innerText = 'Error processing voice.');
+    };
+
+    recognition.onerror = () => {
+        voiceResult.innerText = 'Error in voice recognition. Try again.';
+    };
+});
+
+function speakAttendance(name, status, score) {
+    let msg = new SpeechSynthesisUtterance();
+    msg.text = `Attendance marked ${status} for ${name}. Confidence score ${score.toFixed(2)}.`;
+    window.speechSynthesis.speak(msg);
+}
 </script>
 
 </body>
